@@ -3,28 +3,259 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
-  <title>Gestor de Salarios</title>
+  <title>Calculo de Salarios</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #D1D1D1, #E4E4E4); /* Fondo gris suave */
+      color: #333;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #4A90E2; /* Color azul */
+      margin-top: 20px;
+    }
+
+    #contenedorTarjetas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      padding: 20px;
+    }
+
+    .tarjeta {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      text-align: left;
+      transition: transform 0.3s ease-in-out;
+    }
+
+    .tarjeta:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    button {
+      background-color: #4A90E2; /* Azul */
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background-color 0.3s, transform 0.3s;
+    }
+
+    button:hover {
+      background-color: #F5A623; /* Naranja */
+      transform: scale(1.05);
+    }
+
+    .btn-remove {
+      background-color: #D0021B; /* Rojo */
+      margin-left: 8px;
+    }
+
+    .btn-remove:hover {
+      background-color: #C70000;
+    }
+
+    .btn-agregar {
+      background-color: #4A90E2; /* Azul */
+      margin-top: 20px;
+    }
+
+    .btn-agregar:hover {
+      background-color: #F5A623; /* Naranja */
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+      background-color: white;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 12px;
+      width: 80%;
+      max-width: 500px;
+      animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .close:hover {
+      color: black;
+      cursor: pointer;
+    }
+
+    .btn-cancelar {
+      background-color: #D0021B; /* Rojo */
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    .btn-cancelar:hover {
+      background-color: #C70000;
+    }
+  </style>
 </head>
 <body>
-  <h1>Gestor de Salarios</h1>
-  <table id="tablaSalarios">
-    <tr>
-      <th>Nombre</th>
-      <th>Apellido</th>
-      <th>Cargo</th>
-      <th>Salario</th>
-      <th>ISSS</th>
-      <th>AFP</th>
-      <th>Renta</th>
-      <th>ISR</th>
-      <th>Salario Neto</th>
-      <th>Acciones</th>
-    </tr>
-  </table>
-  <button onclick="nuevoRegistro()">Agregar Registro</button>
-  <script src="funciones.js"></script>
+  <h1>Calculo de Salarios</h1>
+  <div id="contenedorTarjetas"></div>
+  <button onclick="nuevoRegistro()" class="btn-agregar">Agregar Registro</button>
+
+  <!-- Modal para detalles -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <span id="cerrarModal" class="close">&times;</span>
+      <div id="contenidoModal"></div>
+      <button id="cancelarModal" class="btn-cancelar">Cancelar</button> <!-- Botón de cancelar -->
+    </div>
+  </div>
+
+  <script>
+    let registros = [];
+
+    const contenedorTarjetas = document.getElementById("contenedorTarjetas");
+
+    function cargarTarjetas() {
+      contenedorTarjetas.innerHTML = "";
+      registros.forEach((registro, index) => {
+        const tarjeta = document.createElement("div");
+        tarjeta.classList.add("tarjeta");
+        tarjeta.innerHTML = `
+          <h3>${registro.nombre || 'Sin nombre'} ${registro.apellido || 'Sin apellido'}</h3>
+          <p><strong>Cargo:</strong> ${registro.cargo || 'Sin cargo'}</p>
+          <p><strong>Salario:</strong> $${registro.salario || '0.00'}</p>
+          <button onclick="mostrarModal(${index})" class="btn-detalles">Ver Detalles</button>
+          <button class="btn-remove" onclick="eliminarRegistro(${index})">Eliminar</button>
+        `;
+        contenedorTarjetas.appendChild(tarjeta);
+      });
+    }
+
+    function nuevoRegistro() {
+      const nombre = prompt("Ingrese el nombre:");
+      const apellido = prompt("Ingrese el apellido:");
+      const cargo = prompt("Ingrese el cargo:");
+      let salario = prompt("Ingrese el salario:");
+
+      // Asegurar que el salario solo sea un número con un punto decimal
+      salario = salario.replace(/[^0-9.]/g, ''); // Reemplaza cualquier cosa que no sea número o punto
+      while ((salario.match(/\./g) || []).length > 1) { // Verifica si hay más de un punto
+        salario = salario.replace('.', '');
+      }
+      salario = parseFloat(salario) || 0;
+
+      const isss = salario > 1000 ? 30 : salario * 0.03;
+      const afp = salario * 0.0725;
+      const baseImponible = salario - isss - afp;
+      let isr = 0;
+
+      if (baseImponible > 472) {
+        if (baseImponible <= 895.24) isr = (baseImponible - 472) * 0.1 + 17.67;
+        else if (baseImponible <= 2038.10) isr = (baseImponible - 895.24) * 0.2 + 60;
+        else isr = (baseImponible - 2038.10) * 0.3 + 288.57;
+      }
+
+      const salarioNeto = baseImponible - isr;
+
+      // Cálculos Patronales
+      const patronalIsss = salario * 0.075;
+      const patronalAfp = salario * 0.0875;
+
+      registros.push({
+        nombre, 
+        apellido, 
+        cargo, 
+        salario: salario.toFixed(2), 
+        isss: isss.toFixed(2), 
+        afp: afp.toFixed(2), 
+        renta: baseImponible.toFixed(2), 
+        isr: isr.toFixed(2), 
+        neto: salarioNeto.toFixed(2),
+        patronalIsss: patronalIsss.toFixed(2),
+        patronalAfp: patronalAfp.toFixed(2)
+      });
+
+      cargarTarjetas();
+    }
+
+    function mostrarModal(index) {
+      const registro = registros[index];
+      const contenidoModal = document.getElementById("contenidoModal");
+      contenidoModal.innerHTML = `
+        <h2>${registro.nombre} ${registro.apellido}</h2>
+        <p><strong>Cargo:</strong> ${registro.cargo}</p>
+        <p><strong>Salario:</strong> $${registro.salario}</p>
+        <p><strong>ISSS:</strong> $${registro.isss}</p>
+        <p><strong>AFP:</strong> $${registro.afp}</p>
+        <p><strong>Renta Imp:</strong> $${registro.renta}</p>
+        <p><strong>ISR:</strong> $${registro.isr}</p>
+        <p><strong>P. ISSS:</strong> $${registro.patronalIsss}</p>
+        <p><strong>P. AFP:</strong> $${registro.patronalAfp}</p>
+        <p><strong>Salario Neto:</strong> $${registro.neto}</p> <!-- Salario Neto al final -->
+      `;
+      // Abre el modal
+      document.getElementById("modal").style.display = "block";
+    }
+
+    document.getElementById("cerrarModal").onclick = function () {
+      cerrarModal();
+    }
+
+    // Aquí se agregó el evento para el botón "Cancelar"
+    document.getElementById("cancelarModal").onclick = function () {
+      cerrarModal();
+    }
+
+    function cerrarModal() {
+      // Cerrar el modal
+      document.getElementById("modal").style.display = "none";
+    }
+
+    function eliminarRegistro(index) {
+      registros.splice(index, 1);
+      cargarTarjetas();
+    }
+
+    cargarTarjetas();
+  </script>
+
 </body>
 </html>
-
-
