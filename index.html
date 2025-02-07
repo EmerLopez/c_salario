@@ -196,7 +196,7 @@
       const salarioNeto = baseImponible - isr;
 
       // Cálculos Patronales
-      const patronalIsss = salario * 0.075;
+      const patronalIsss = salario > 1000 ? 75 : salario * 0.075;;
       const patronalAfp = salario * 0.0875;
 
       registros.push({
